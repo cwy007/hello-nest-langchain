@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Inject, Injectable } from '@nestjs/common';
 import { CreateAiDto } from './dto/create-ai.dto';
 import { UpdateAiDto } from './dto/update-ai.dto';
 import type { Runnable } from '@langchain/core/runnables';
@@ -11,18 +11,12 @@ import { StringOutputParser } from '@langchain/core/output_parsers';
 export class AiService {
   private readonly chain: Runnable;
 
-  constructor(private readonly configService: ConfigService) {
+  constructor(
+    @Inject('CHAT_MODEL') private readonly model: ChatOpenAI,
+  ) {
     const prompt = PromptTemplate.fromTemplate(
       '请回答一下问题: {query}',
     );
-    const model = new ChatOpenAI({
-      temperature: 0.7,
-      model: this.configService.get<string>('MODEL_NAME'),
-      apiKey: this.configService.get<string>('OPENAI_API_KEY'),
-      configuration: {
-        baseURL: this.configService.get<string>('OPENAI_BASE_URL'),
-      },
-    });
     this.chain = prompt.pipe(model).pipe(new StringOutputParser());
   }
 
@@ -31,7 +25,7 @@ export class AiService {
     return result;
   }
 
-  async *streamChain(query: string): AsyncGenerator<string> {
+  async * streamChain(query: string): AsyncGenerator<string> {
     const stream = await this.chain.stream({ query });
     for await (const chunk of stream) {
       yield chunk;
