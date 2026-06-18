@@ -30,11 +30,12 @@ export class AiService {
   constructor(
     @Inject('CHAT_MODEL') private readonly model: ChatOpenAI,
     @Inject('QUERY_USER_TOOL') private readonly queryUserTool: any,
+    @Inject('SEND_MAIL_TOOL') private readonly sendMailTool: any,
   ) {
     const prompt = PromptTemplate.fromTemplate('请回答一下问题: {query}');
     this.chain = prompt.pipe(model).pipe(new StringOutputParser());
 
-    this.modelWithTools = model.bindTools([this.queryUserTool]);
+    this.modelWithTools = model.bindTools([this.queryUserTool, this.sendMailTool]);
   }
 
   async runChain(query: string): Promise<string> {
@@ -75,6 +76,15 @@ export class AiService {
         if (toolName === 'query_user') {
           const toolArgs = queryUserArgsSchema.parse(toolCall.args);
           const toolResult = await this.queryUserTool.invoke(toolArgs);
+          messages.push(
+            new ToolMessage({
+              tool_call_id: toolCallId,
+              name: toolName,
+              content: toolResult,
+            }),
+          );
+        } else if (toolName === 'send_mail') {
+          const toolResult = await this.sendMailTool.invoke(toolCall.args);
           messages.push(
             new ToolMessage({
               tool_call_id: toolCallId,
@@ -138,6 +148,17 @@ export class AiService {
         if (toolName === 'query_user') {
           const toolArgs = queryUserArgsSchema.parse(toolCall.args);
           const toolResult = await this.queryUserTool.invoke(toolArgs);
+          console.log('Tool result:', toolResult);
+          messages.push(
+            new ToolMessage({
+              tool_call_id: toolCallId,
+              name: toolName,
+              content: toolResult,
+            }),
+          );
+        } else if (toolName === 'send_mail') {
+          const toolResult = await this.sendMailTool.invoke(toolCall.args);
+          console.log('Tool result:', toolResult);
           messages.push(
             new ToolMessage({
               tool_call_id: toolCallId,
