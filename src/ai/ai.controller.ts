@@ -16,8 +16,7 @@ export class AiController {
   }
 
   @Sse('chat/stream')
-  streamChat(@Query('query') query: string, @Res() res: Response) {
-    res.setHeader('Content-Type', 'text/event-stream; charset=utf-8');
+  streamChat(@Query('query') query: string) {
     return from(this.aiService.streamChain(query)).pipe(
       map((chunk) => {
         console.log('Received chunk:', chunk);
@@ -30,6 +29,17 @@ export class AiController {
   async chatWithTools(@Query('query') query: string) {
     const answer = await this.aiService.runModelWithTools(query);
     return { answer };
+  }
+
+  @Sse('chat-with-tools/stream')
+  streamChatWithTools(@Query('query') query: string) {
+    const stream = this.aiService.runModelWithTools(query);
+    return from(stream).pipe(
+      map((chunk) => {
+        console.log('Received chunk:', chunk);
+        return { data: chunk };
+      }),
+    );
   }
 
   @Post()
