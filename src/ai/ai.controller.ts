@@ -26,6 +26,12 @@ export class AiController {
     );
   }
 
+  @Get('chat-with-tools')
+  async chatWithTools(@Query('query') query: string) {
+    const answer = await this.aiService.runModelWithTools(query);
+    return { answer };
+  }
+
   @Post()
   create(@Body() createAiDto: CreateAiDto) {
     return this.aiService.create(createAiDto);
