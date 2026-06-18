@@ -1,7 +1,9 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, Query } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, Query, Sse, Res } from '@nestjs/common';
 import { AiService } from './ai.service';
 import { CreateAiDto } from './dto/create-ai.dto';
 import { UpdateAiDto } from './dto/update-ai.dto';
+import { from, map } from 'rxjs';
+import type { Response } from 'express';
 
 @Controller('ai')
 export class AiController {
@@ -11,6 +13,17 @@ export class AiController {
   async chat(@Query('query') query: string) {
     const answer = await this.aiService.runChain(query);
     return { answer };
+  }
+
+  @Sse('chat/stream')
+  streamChat(@Query('query') query: string, @Res() res: Response) {
+    res.setHeader('Content-Type', 'text/event-stream; charset=utf-8');
+    return from(this.aiService.streamChain(query)).pipe(
+      map((chunk) => {
+        console.log('Received chunk:', chunk);
+        return { data: chunk };
+      }),
+    );
   }
 
   @Post()

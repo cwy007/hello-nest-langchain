@@ -31,6 +31,13 @@ export class AiService {
     return result;
   }
 
+  async *streamChain(query: string): AsyncGenerator<string> {
+    const stream = await this.chain.stream({ query });
+    for await (const chunk of stream) {
+      yield chunk;
+    }
+  }
+
   create(createAiDto: CreateAiDto) {
     return 'This action adds a new ai';
   }
