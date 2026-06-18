@@ -31,11 +31,12 @@ export class AiService {
     @Inject('CHAT_MODEL') private readonly model: ChatOpenAI,
     @Inject('QUERY_USER_TOOL') private readonly queryUserTool: any,
     @Inject('SEND_MAIL_TOOL') private readonly sendMailTool: any,
+    @Inject('WEB_SEARCH_TOOL') private readonly webSearchTool: any,
   ) {
     const prompt = PromptTemplate.fromTemplate('请回答一下问题: {query}');
     this.chain = prompt.pipe(model).pipe(new StringOutputParser());
 
-    this.modelWithTools = model.bindTools([this.queryUserTool, this.sendMailTool]);
+    this.modelWithTools = model.bindTools([this.queryUserTool, this.sendMailTool, this.webSearchTool]);
   }
 
   async runChain(query: string): Promise<string> {
@@ -53,7 +54,7 @@ export class AiService {
   async runModelWithTools(query: string): Promise<string> {
     const messages: BaseMessage[] = [
       new SystemMessage(
-        '你是一个智能助手，可以在需要时调用工具（如 query_user）来查询用户信息，再用结果回答用户的问题。',
+        '你是一个智能助手，可以在需要时调用工具（如 query_user、send_mail、web_search）来查询用户信息，再用结果回答用户的问题。',
       ),
       new HumanMessage(query),
     ];
@@ -85,6 +86,16 @@ export class AiService {
           );
         } else if (toolName === 'send_mail') {
           const toolResult = await this.sendMailTool.invoke(toolCall.args);
+          console.log('Tool result:', toolResult);
+          messages.push(
+            new ToolMessage({
+              tool_call_id: toolCallId,
+              name: toolName,
+              content: toolResult,
+            }),
+          );
+        } else if (toolName === 'web_search') {
+          const toolResult = await this.webSearchTool.invoke(toolCall.args);
           messages.push(
             new ToolMessage({
               tool_call_id: toolCallId,
@@ -100,7 +111,7 @@ export class AiService {
   async *runModelWithToolsStream(query: string): AsyncGenerator<string> {
     const messages: BaseMessage[] = [
       new SystemMessage(
-        '你是一个智能助手，可以在需要时调用工具（如 query_user）来查询用户信息，再用结果回答用户的问题。',
+        '你是一个智能助手，可以在需要时调用工具（如 query_user、send_mail、web_search）来查询用户信息，再用结果回答用户的问题。',
       ),
       new HumanMessage(query),
     ];
@@ -158,6 +169,16 @@ export class AiService {
           );
         } else if (toolName === 'send_mail') {
           const toolResult = await this.sendMailTool.invoke(toolCall.args);
+          console.log('Tool result:', toolResult);
+          messages.push(
+            new ToolMessage({
+              tool_call_id: toolCallId,
+              name: toolName,
+              content: toolResult,
+            }),
+          );
+        } else if (toolName === 'web_search') {
+          const toolResult = await this.webSearchTool.invoke(toolCall.args);
           console.log('Tool result:', toolResult);
           messages.push(
             new ToolMessage({
