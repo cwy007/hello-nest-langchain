@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { Inject, Module } from '@nestjs/common';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { BookModule } from './book/book.module';
@@ -17,9 +17,12 @@ import { CustomTypeOrmLogger } from './CustomTypeOrmLogger';
 import { SnakeNamingStrategy } from 'typeorm-naming-strategies';
 import { UsersModule } from './users/users.module';
 import { User } from './users/entities/user.entity';
+import { CronExpression, ScheduleModule, SchedulerRegistry } from '@nestjs/schedule';
+import { CronJob } from 'cron';
 
 @Module({
   imports: [
+    ScheduleModule.forRoot(),
     ConfigModule.forRoot({
       isGlobal: true,
       envFilePath: path.join(
@@ -118,4 +121,38 @@ import { User } from './users/entities/user.entity';
   controllers: [AppController],
   providers: [AppService],
 })
-export class AppModule { }
+export class AppModule {
+  @Inject(SchedulerRegistry)
+  private schedulerRegistry: SchedulerRegistry;
+
+  async onApplicationBootstrap() {
+    const job = new CronJob(CronExpression.EVERY_SECOND, () => {
+      console.log('run cron job every second');
+    });
+
+    this.schedulerRegistry.addCronJob('job1', job);
+    job.start();
+    setTimeout(() => {
+      job.stop();
+      console.log('cron job has been stopped');
+    }, 10000);
+
+    const intervalRef = setInterval(() => {
+      console.log('run interval job every 5 seconds');
+    }, 5000);
+    this.schedulerRegistry.addInterval('interval1', intervalRef);
+    setTimeout(() => {
+      this.schedulerRegistry.deleteInterval('interval1');
+      console.log('interval job has been stopped');
+    }, 20000);
+
+    const timeoutRef = setTimeout(() => {
+      console.log('run timeout job after 10 seconds');
+    }, 10000);
+    this.schedulerRegistry.addTimeout('timeout1', timeoutRef);
+    setTimeout(() => {
+      this.schedulerRegistry.deleteTimeout('timeout1');
+      console.log('timeout job has been stopped');
+    }, 15000);
+  }
+}
