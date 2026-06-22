@@ -21,6 +21,7 @@ import { CronExpression, ScheduleModule, SchedulerRegistry } from '@nestjs/sched
 import { CronJob } from 'cron';
 import { JobModule } from './job/job.module';
 import { Job } from './job/entities/job.entity';
+import { ToolModule } from './tool/tool.module';
 
 @Module({
   imports: [
@@ -120,6 +121,7 @@ import { Job } from './job/entities/job.entity';
     EmailModule,
     UsersModule,
     JobModule,
+    ToolModule,
   ],
   controllers: [AppController],
   providers: [AppService],

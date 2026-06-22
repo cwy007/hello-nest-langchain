@@ -34,6 +34,7 @@ export class AiService {
     @Inject('WEB_SEARCH_TOOL') private readonly webSearchTool: any,
     @Inject('DB_USERS_CRUD_TOOL') private readonly dbUsersCrudTool: any,
     @Inject('CRON_JOB_TOOL') private readonly cronJobTool: any,
+    @Inject('TIME_NOW_TOOL') private readonly timeNowTool: any,
   ) {
     const prompt = PromptTemplate.fromTemplate('请回答一下问题: {query}');
     this.chain = prompt.pipe(model).pipe(new StringOutputParser());
@@ -44,6 +45,7 @@ export class AiService {
       this.webSearchTool,
       this.dbUsersCrudTool,
       this.cronJobTool,
+      this.timeNowTool,
     ]);
   }
 
@@ -140,6 +142,15 @@ export class AiService {
               content: toolResult,
             }),
           );
+        } else if (toolName === 'time_now') {
+          const toolResult = await this.timeNowTool.invoke(toolCall.args);
+          messages.push(
+            new ToolMessage({
+              tool_call_id: toolCallId,
+              name: toolName,
+              content: toolResult,
+            }),
+          );
         }
       }
     }
@@ -148,7 +159,7 @@ export class AiService {
   async *runModelWithToolsStream(query: string): AsyncGenerator<string> {
     const messages: BaseMessage[] = [
       new SystemMessage(
-        `你是一个通用任务助手，可以根据用户的目标规划步骤，并在需要时调用工具：\`query_user\` 查询或校验用户信息、\`send_mail\` 发送邮件、\`web_search\` 进行互联网搜索、\`db_users_crud\` 读写数据库 users 表、\`cron_job\` 创建和管理定时/周期任务（\`list\`/\`add\`/\`toggle\`），从而实现提醒、定期任务、数据同步等各种自动化需求。
+        `你是一个通用任务助手，可以根据用户的目标规划步骤，并在需要时调用工具：\`query_user\` 查询或校验用户信息、\`send_mail\` 发送邮件、\`web_search\` 进行互联网搜索、\`db_users_crud\` 读写数据库 users 表、\`cron_job\` 创建和管理定时/周期任务（\`list\`/\`add\`/\`toggle\`）、\`time_now\` 获取当前时间，从而实现提醒、定期任务、数据同步等各种自动化需求。
 
 定时任务类型选择规则（非常重要）：
 - 用户说“X分钟/小时/天后”“在某个时间点”“到点提醒”（一次性）=> 用 \`cron_job\` + \`type=at\`（执行一次后自动停用），\`at\`=当前时间+X 或解析出的时间点
@@ -247,6 +258,16 @@ export class AiService {
           );
         } else if (toolName === 'cron_job') {
           const toolResult = await this.cronJobTool.invoke(toolCall.args);
+          console.log('Tool result:', toolResult);
+          messages.push(
+            new ToolMessage({
+              tool_call_id: toolCallId,
+              name: toolName,
+              content: toolResult,
+            }),
+          );
+        } else if (toolName === 'time_now') {
+          const toolResult = await this.timeNowTool.invoke(toolCall.args);
           console.log('Tool result:', toolResult);
           messages.push(
             new ToolMessage({
