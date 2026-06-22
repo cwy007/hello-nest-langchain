@@ -32,11 +32,12 @@ export class AiService {
     @Inject('QUERY_USER_TOOL') private readonly queryUserTool: any,
     @Inject('SEND_MAIL_TOOL') private readonly sendMailTool: any,
     @Inject('WEB_SEARCH_TOOL') private readonly webSearchTool: any,
+    @Inject('DB_USERS_CRUD_TOOL') private readonly dbUsersCrudTool: any,
   ) {
     const prompt = PromptTemplate.fromTemplate('请回答一下问题: {query}');
     this.chain = prompt.pipe(model).pipe(new StringOutputParser());
 
-    this.modelWithTools = model.bindTools([this.queryUserTool, this.sendMailTool, this.webSearchTool]);
+    this.modelWithTools = model.bindTools([this.queryUserTool, this.sendMailTool, this.webSearchTool, this.dbUsersCrudTool]);
   }
 
   async runChain(query: string): Promise<string> {
@@ -103,6 +104,15 @@ export class AiService {
               content: toolResult,
             }),
           );
+        } else if (toolName === 'db_users_crud') {
+          const toolResult = await this.dbUsersCrudTool.invoke(toolCall.args);
+          messages.push(
+            new ToolMessage({
+              tool_call_id: toolCallId,
+              name: toolName,
+              content: toolResult,
+            }),
+          );
         }
       }
     }
@@ -111,7 +121,7 @@ export class AiService {
   async *runModelWithToolsStream(query: string): AsyncGenerator<string> {
     const messages: BaseMessage[] = [
       new SystemMessage(
-        '你是一个智能助手，可以在需要时调用工具（如 query_user、send_mail、web_search）来查询用户信息，再用结果回答用户的问题。',
+        '你是一个智能助手，可以在需要时调用工具（如 query_user、send_mail、web_search、db_users_crud）来查询用户信息，再用结果回答用户的问题。',
       ),
       new HumanMessage(query),
     ];
@@ -179,6 +189,16 @@ export class AiService {
           );
         } else if (toolName === 'web_search') {
           const toolResult = await this.webSearchTool.invoke(toolCall.args);
+          console.log('Tool result:', toolResult);
+          messages.push(
+            new ToolMessage({
+              tool_call_id: toolCallId,
+              name: toolName,
+              content: toolResult,
+            }),
+          );
+        } else if (toolName === 'db_users_crud') {
+          const toolResult = await this.dbUsersCrudTool.invoke(toolCall.args);
           console.log('Tool result:', toolResult);
           messages.push(
             new ToolMessage({
