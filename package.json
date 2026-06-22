@@ -31,10 +31,14 @@
     "@nestjs/serve-static": "^5.0.5",
     "@nestjs/typeorm": "^11.0.2",
     "mysql2": "^3.22.5",
+    "nest-winston": "^1.10.2",
     "nodemailer": "^9.0.1",
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.1",
     "typeorm": "^1.0.0",
+    "typeorm-naming-strategies": "^4.1.0",
+    "winston": "^3.19.0",
+    "winston-daily-rotate-file": "^5.0.0",
     "zod": "^4.4.3"
   },
   "devDependencies": {
