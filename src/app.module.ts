@@ -23,6 +23,7 @@ import { JobModule } from './job/job.module';
 import { Job } from './job/entities/job.entity';
 import { ToolModule } from './tool/tool.module';
 import { SpeechModule } from './speech/speech.module';
+import { EventEmitterModule } from '@nestjs/event-emitter';
 
 @Module({
   imports: [
@@ -33,6 +34,9 @@ import { SpeechModule } from './speech/speech.module';
         __dirname,
         process.env.NODE_ENV === 'production' ? '.env.production' : '.env',
       ),
+    }),
+    EventEmitterModule.forRoot({
+      maxListeners: 200,
     }),
     ServeStaticModule.forRoot({
       rootPath: path.join(__dirname, '..', 'public'),

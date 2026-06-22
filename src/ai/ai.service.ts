@@ -16,6 +16,11 @@ import {
   SystemMessage,
   ToolMessage,
 } from '@langchain/core/messages';
+import { EventEmitter2 } from '@nestjs/event-emitter';
+import {
+  AI_TTS_STREAM_EVENT,
+  AiTtsStreamEvent,
+} from 'src/common/stream-events';
 
 const queryUserArgsSchema = z.object({
   userId: z.string().describe('用户 ID，例如: 001, 002, 003'),
@@ -35,6 +40,7 @@ export class AiService {
     @Inject('DB_USERS_CRUD_TOOL') private readonly dbUsersCrudTool: any,
     @Inject('CRON_JOB_TOOL') private readonly cronJobTool: any,
     @Inject('TIME_NOW_TOOL') private readonly timeNowTool: any,
+    private readonly eventEmitter: EventEmitter2,
   ) {
     const prompt = PromptTemplate.fromTemplate('请回答一下问题: {query}');
     this.chain = prompt.pipe(model).pipe(new StringOutputParser());
@@ -49,15 +55,25 @@ export class AiService {
     ]);
   }
 
-
   async runChain(query: string): Promise<string> {
     const result = await this.chain.invoke({ query });
     return result;
   }
 
-  async *streamChain(query: string): AsyncGenerator<string> {
+  async *streamChain(
+    query: string,
+    ttsSessionId?: string,
+  ): AsyncGenerator<string> {
     const stream = await this.chain.stream({ query });
     for await (const chunk of stream) {
+      if (ttsSessionId) {
+        const streamEvent: AiTtsStreamEvent = {
+          type: 'chunk',
+          sessionId: ttsSessionId,
+          chunk,
+        };
+        this.eventEmitter.emit(AI_TTS_STREAM_EVENT, streamEvent);
+      }
       yield chunk;
     }
   }
@@ -93,7 +109,10 @@ export class AiService {
       }
 
       for (const toolCall of toolCalls) {
-        console.log('Processing tool call:', { name: toolCall.name, args: toolCall.args });
+        console.log('Processing tool call:', {
+          name: toolCall.name,
+          args: toolCall.args,
+        });
         const toolCallId = toolCall.id || '';
         const toolName = toolCall.name;
 
@@ -250,7 +269,11 @@ export class AiService {
             }),
           );
         } else if (toolName === 'web_search') {
-          const toolResult = await this.webSearchTool.invoke(typeof toolCall.args === 'string' ? JSON.parse(toolCall.args) : toolCall.args);
+          const toolResult = await this.webSearchTool.invoke(
+            typeof toolCall.args === 'string'
+              ? JSON.parse(toolCall.args)
+              : toolCall.args,
+          );
           console.log('Tool result:', toolResult);
           messages.push(
             new ToolMessage({
@@ -260,7 +283,11 @@ export class AiService {
             }),
           );
         } else if (toolName === 'db_users_crud') {
-          const toolResult = await this.dbUsersCrudTool.invoke(typeof toolCall.args === 'string' ? JSON.parse(toolCall.args) : toolCall.args);
+          const toolResult = await this.dbUsersCrudTool.invoke(
+            typeof toolCall.args === 'string'
+              ? JSON.parse(toolCall.args)
+              : toolCall.args,
+          );
           console.log('Tool result:', toolResult);
           messages.push(
             new ToolMessage({
@@ -270,7 +297,11 @@ export class AiService {
             }),
           );
         } else if (toolName === 'cron_job') {
-          const toolResult = await this.cronJobTool.invoke(typeof toolCall.args === 'string' ? JSON.parse(toolCall.args) : toolCall.args);
+          const toolResult = await this.cronJobTool.invoke(
+            typeof toolCall.args === 'string'
+              ? JSON.parse(toolCall.args)
+              : toolCall.args,
+          );
           console.log('Tool result:', toolResult);
           messages.push(
             new ToolMessage({

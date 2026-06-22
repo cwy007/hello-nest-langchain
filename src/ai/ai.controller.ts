@@ -4,10 +4,15 @@ import { CreateAiDto } from './dto/create-ai.dto';
 import { UpdateAiDto } from './dto/update-ai.dto';
 import { from, map } from 'rxjs';
 import type { Response } from 'express';
+import { EventEmitter2 } from '@nestjs/event-emitter';
+import { AI_TTS_STREAM_EVENT, type AiTtsStreamEvent } from 'src/common/stream-events';
 
 @Controller('ai')
 export class AiController {
-  constructor(private readonly aiService: AiService) { }
+  constructor(
+    private readonly aiService: AiService,
+    private readonly eventEmitter: EventEmitter2,
+  ) { }
 
   @Get('chat')
   async chat(@Query('query') query: string) {
@@ -16,8 +21,17 @@ export class AiController {
   }
 
   @Sse('chat/stream')
-  streamChat(@Query('query') query: string) {
-    return from(this.aiService.streamChain(query)).pipe(
+  streamChat(
+    @Query('query') query: string,
+    @Query('ttsSessionId') ttsSessionId: string,
+  ) {
+    const sessionId = ttsSessionId?.trim();
+    if (sessionId) {
+      const startEvent: AiTtsStreamEvent = { type: 'start', sessionId, query };
+      this.eventEmitter.emit(AI_TTS_STREAM_EVENT, startEvent);
+    }
+
+    return from(this.aiService.streamChain(query, sessionId)).pipe(
       map((chunk) => {
         console.log('Received chunk:', chunk);
         return { data: chunk };
