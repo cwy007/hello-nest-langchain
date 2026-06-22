@@ -15,6 +15,8 @@ import 'winston-daily-rotate-file';
 import { authPlugins } from 'mysql2';
 import { CustomTypeOrmLogger } from './CustomTypeOrmLogger';
 import { SnakeNamingStrategy } from 'typeorm-naming-strategies';
+import { UsersModule } from './users/users.module';
+import { User } from './users/entities/user.entity';
 
 @Module({
   imports: [
@@ -56,7 +58,7 @@ import { SnakeNamingStrategy } from 'typeorm-naming-strategies';
           username: configService.get<string>('mysql_server_username'),
           password: configService.get<string>('mysql_server_password'),
           database: configService.get<string>('mysql_server_database'),
-          entities: [],
+          entities: [User],
           synchronize: true, // 生产环境建议关闭自动同步，使用迁移工具管理数据库结构
           logging: true,
           logger: new CustomTypeOrmLogger(logger),
@@ -111,6 +113,7 @@ import { SnakeNamingStrategy } from 'typeorm-naming-strategies';
     BookModule,
     AiModule,
     EmailModule,
+    UsersModule,
   ],
   controllers: [AppController],
   providers: [AppService],
