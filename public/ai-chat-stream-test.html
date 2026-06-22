@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AI Chat Stream 测试</title>
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      max-width: 720px;
+      margin: 2rem auto;
+      padding: 1rem;
+      color: #111827;
+      background: #f3f4f6;
+    }
+
+    .card {
+      background: #ffffff;
+      border: 1px solid #e5e7eb;
+      border-radius: 12px;
+      padding: 1.25rem;
+      box-shadow: 0 8px 24px rgba(15, 23, 42, 0.06);
+    }
+
+    h1 {
+      margin: 0 0 1rem;
+      font-size: 1.5rem;
+    }
+
+    p {
+      margin: 0 0 1rem;
+      color: #4b5563;
+    }
+
+    label {
+      display: block;
+      margin-bottom: 0.5rem;
+      font-weight: 600;
+    }
+
+    input[type="text"],
+    textarea {
+      width: 100%;
+      padding: 0.75rem;
+      border: 1px solid #d1d5db;
+      border-radius: 8px;
+      font-size: 1rem;
+      margin-bottom: 1rem;
+      background: #fff;
+    }
+
+    textarea {
+      min-height: 120px;
+      resize: vertical;
+    }
+
+    .actions {
+      display: flex;
+      gap: 0.75rem;
+      margin-bottom: 1rem;
+    }
+
+    button {
+      padding: 0.7rem 1rem;
+      font-size: 1rem;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+    }
+
+    button.primary {
+      background: #2563eb;
+      color: #fff;
+    }
+
+    button.secondary {
+      background: #e5e7eb;
+      color: #111827;
+    }
+
+    button:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+
+    .status {
+      margin-bottom: 1rem;
+      color: #6b7280;
+      font-size: 0.95rem;
+    }
+
+    .output {
+      min-height: 180px;
+      padding: 1rem;
+      border-radius: 8px;
+      border: 1px solid #dbeafe;
+      background: #eff6ff;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+
+    .output:empty::before {
+      content: "流式输出会显示在这里...";
+      color: #93a3b8;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="card">
+    <h1>/ai/chat/stream 测试页</h1>
+    <p>用于测试 <code>http://localhost:3000/ai/chat/stream?query=langchain组件</code> 这类 SSE 接口。</p>
+
+    <label for="baseUrl">服务地址</label>
+    <input type="text" id="baseUrl" value="http://localhost:3000" placeholder="http://localhost:3000" />
+
+    <label for="query">query 参数</label>
+    <textarea id="query" placeholder="请输入问题">langchain组件</textarea>
+
+    <div class="actions">
+      <button type="button" id="startBtn" class="primary">开始请求</button>
+      <button type="button" id="stopBtn" class="secondary" disabled>停止请求</button>
+    </div>
+
+    <div class="status" id="status">未连接</div>
+    <div class="output" id="output"></div>
+  </div>
+
+  <script>
+    const baseUrlInput = document.getElementById('baseUrl');
+    const queryInput = document.getElementById('query');
+    const startBtn = document.getElementById('startBtn');
+    const stopBtn = document.getElementById('stopBtn');
+    const status = document.getElementById('status');
+    const output = document.getElementById('output');
+
+    let eventSource = null;
+
+    function closeStream(message) {
+      if (eventSource) {
+        eventSource.close();
+        eventSource = null;
+      }
+      startBtn.disabled = false;
+      stopBtn.disabled = true;
+      if (message) {
+        status.textContent = message;
+      }
+    }
+
+    startBtn.addEventListener('click', () => {
+      const baseUrl = baseUrlInput.value.trim().replace(/\/$/, '');
+      const query = queryInput.value.trim();
+
+      if (!baseUrl) {
+        status.textContent = '请输入服务地址';
+        return;
+      }
+
+      if (!query) {
+        status.textContent = '请输入 query 参数';
+        return;
+      }
+
+      closeStream();
+      output.textContent = '';
+
+      const url = `${baseUrl}/ai/chat/stream?query=${encodeURIComponent(query)}`;
+      status.textContent = `连接中: ${url}`;
+      startBtn.disabled = true;
+      stopBtn.disabled = false;
+
+      eventSource = new EventSource(url);
+
+      eventSource.onmessage = (event) => {
+        output.textContent += event.data;
+        status.textContent = '接收中...';
+      };
+
+      eventSource.onerror = () => {
+        closeStream('连接已关闭或发生错误');
+      };
+    });
+
+    stopBtn.addEventListener('click', () => {
+      closeStream('已手动停止');
+    });
+  </script>
+</body>
+
+</html>
