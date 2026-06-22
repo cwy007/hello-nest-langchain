@@ -33,10 +33,10 @@ export class AiController {
 
   @Sse('chat-with-tools/stream')
   streamChatWithTools(@Query('query') query: string) {
-    const stream = this.aiService.runModelWithTools(query);
+    const stream = this.aiService.runModelWithToolsStream(query);
     return from(stream).pipe(
       map((chunk) => {
-        console.log('Received chunk:', chunk);
+        console.log('chat-with-tools/stream Received chunk:', chunk);
         return { data: chunk };
       }),
     );

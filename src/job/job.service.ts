@@ -9,6 +9,7 @@ import { SchedulerRegistry } from '@nestjs/schedule';
 import { CronJob } from 'cron';
 import { EntityManager } from 'typeorm';
 import { Job } from './entities/job.entity';
+import { JobAgentService } from 'src/ai/job-agent.service';
 
 @Injectable()
 export class JobService implements OnApplicationBootstrap {
@@ -17,10 +18,14 @@ export class JobService implements OnApplicationBootstrap {
   @Inject(EntityManager)
   private readonly entityManager: EntityManager;
 
+  @Inject(JobAgentService)
+  private readonly jobAgentService: JobAgentService;
+
   @Inject(SchedulerRegistry)
   private readonly schedulerRegistry: SchedulerRegistry;
 
   async onApplicationBootstrap() {
+    // 调度器的运行时注册信息不会持久化，应用重启后需要把数据库里启用的任务重新挂回内存调度器。
     const enabledJobs = await this.entityManager.find(Job, {
       where: { isEnabled: true },
     });
@@ -145,7 +150,8 @@ export class JobService implements OnApplicationBootstrap {
       }
 
       const ref = setInterval(async () => {
-        this.logger.log(`run job ${job.id}, ${job.instruction}`);
+        const result = await this.jobAgentService.runJob(job.instruction);
+        this.logger.log(`[job ${job.id}], ${job.instruction}, result: ${result}`);
         await this.entityManager.update(Job, job.id, { lastRun: new Date() });
       }, job.everyMs);
 
@@ -163,7 +169,8 @@ export class JobService implements OnApplicationBootstrap {
 
       const delay = Math.max(0, job.at.getTime() - Date.now());
       const ref = setTimeout(async () => {
-        this.logger.log(`run job ${job.id}, ${job.instruction}`);
+        const result = await this.jobAgentService.runJob(job.instruction);
+        this.logger.log(`[job ${job.id}], ${job.instruction}, result: ${result}`);
         await this.entityManager.update(Job, job.id, {
           lastRun: new Date(),
           isEnabled: false, // at 类型只执行一次：执行完自动停用
@@ -210,7 +217,8 @@ export class JobService implements OnApplicationBootstrap {
   private createCronJob(job: Job) {
     const cronExpr = job.cron ?? '';
     return new CronJob(cronExpr, async () => {
-      this.logger.log(`run job ${job.id}, ${job.instruction}`);
+      const result = await this.jobAgentService.runJob(job.instruction);
+      this.logger.log(`[job ${job.id}], ${job.instruction}, result: ${result}`);
       await this.entityManager.update(Job, job.id, { lastRun: new Date() });
     });
   }

@@ -49,6 +49,7 @@ export class AiService {
     ]);
   }
 
+
   async runChain(query: string): Promise<string> {
     const result = await this.chain.invoke({ query });
     return result;
@@ -92,6 +93,7 @@ export class AiService {
       }
 
       for (const toolCall of toolCalls) {
+        console.log('Processing tool call:', { name: toolCall.name, args: toolCall.args });
         const toolCallId = toolCall.id || '';
         const toolName = toolCall.name;
 
@@ -116,7 +118,11 @@ export class AiService {
             }),
           );
         } else if (toolName === 'web_search') {
-          const toolResult = await this.webSearchTool.invoke(toolCall.args);
+          const toolResult = await this.webSearchTool.invoke(
+            typeof toolCall.args === 'string'
+              ? JSON.parse(toolCall.args)
+              : toolCall.args,
+          );
           messages.push(
             new ToolMessage({
               tool_call_id: toolCallId,
@@ -148,7 +154,7 @@ export class AiService {
             new ToolMessage({
               tool_call_id: toolCallId,
               name: toolName,
-              content: toolResult,
+              content: toolResult.iso,
             }),
           );
         }
@@ -194,19 +200,26 @@ export class AiService {
 
         if (!hasToolCallChunk) {
           // 如果没有工具调用，说明模型已经给出了最终答案
-          yield fullAiMessage.content as string;
+          // yield fullAiMessage.content as string;
         }
+        yield chunk.content as string;
       }
 
       if (!fullAiMessage) {
+        yield '\n';
         return;
       }
 
       messages.push(fullAiMessage);
 
       const toolCalls = fullAiMessage.tool_call_chunks || [];
+      console.log(
+        'Tool calls:',
+        toolCalls.map((tc) => ({ name: tc.name, args: tc.args })),
+      );
       // 没有工具调用：说明这一轮就是最终答案，已经在上面的 for-await-of 循环中处理了，可以结束
       if (toolCalls.length === 0) {
+        yield '\n';
         return;
       }
 
@@ -237,7 +250,7 @@ export class AiService {
             }),
           );
         } else if (toolName === 'web_search') {
-          const toolResult = await this.webSearchTool.invoke(toolCall.args);
+          const toolResult = await this.webSearchTool.invoke(typeof toolCall.args === 'string' ? JSON.parse(toolCall.args) : toolCall.args);
           console.log('Tool result:', toolResult);
           messages.push(
             new ToolMessage({
@@ -247,7 +260,7 @@ export class AiService {
             }),
           );
         } else if (toolName === 'db_users_crud') {
-          const toolResult = await this.dbUsersCrudTool.invoke(toolCall.args);
+          const toolResult = await this.dbUsersCrudTool.invoke(typeof toolCall.args === 'string' ? JSON.parse(toolCall.args) : toolCall.args);
           console.log('Tool result:', toolResult);
           messages.push(
             new ToolMessage({
@@ -257,7 +270,7 @@ export class AiService {
             }),
           );
         } else if (toolName === 'cron_job') {
-          const toolResult = await this.cronJobTool.invoke(toolCall.args);
+          const toolResult = await this.cronJobTool.invoke(typeof toolCall.args === 'string' ? JSON.parse(toolCall.args) : toolCall.args);
           console.log('Tool result:', toolResult);
           messages.push(
             new ToolMessage({
@@ -273,7 +286,7 @@ export class AiService {
             new ToolMessage({
               tool_call_id: toolCallId,
               name: toolName,
-              content: toolResult,
+              content: toolResult.iso,
             }),
           );
         }

@@ -114,7 +114,7 @@ import { ToolModule } from './tool/tool.module';
           //   path: '/logs',
           // })
         ],
-      })
+      }),
     }),
     BookModule,
     AiModule,

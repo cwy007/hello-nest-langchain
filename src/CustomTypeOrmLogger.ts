@@ -2,7 +2,16 @@ import { WinstonLogger } from "nest-winston";
 import { Logger, QueryRunner } from "typeorm";
 
 export class CustomTypeOrmLogger implements Logger {
-  constructor(private readonly winstonLogger: WinstonLogger) { }
+  constructor(private readonly winstonLogger: WinstonLogger) {
+  }
+
+  error(message: any, ...args: any[]) {
+    this.winstonLogger.error(message, ...args);
+  }
+
+  warn(message: any, ...args: any[]) {
+    this.winstonLogger.warn(message, ...args);
+  }
 
   log(level: "log" | "info" | "warn", message: any, ...args: any[]) {
     this.winstonLogger[level](message, ...args);

@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { forwardRef, Module } from '@nestjs/common';
 import { UsersModule } from 'src/users/users.module';
 import { JobModule } from 'src/job/job.module';
 import { ChatModelService } from './chat-model.service';
@@ -10,7 +10,7 @@ import { TimeNowToolService } from './time-now-tool.service';
 import { WebSearchToolService } from './web-search-tool.service';
 
 @Module({
-  imports: [UsersModule, JobModule],
+  imports: [UsersModule, forwardRef(() => JobModule)],
   providers: [
     ChatModelService,
     TimeNowToolService,
