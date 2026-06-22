@@ -19,6 +19,8 @@ import { UsersModule } from './users/users.module';
 import { User } from './users/entities/user.entity';
 import { CronExpression, ScheduleModule, SchedulerRegistry } from '@nestjs/schedule';
 import { CronJob } from 'cron';
+import { JobModule } from './job/job.module';
+import { Job } from './job/entities/job.entity';
 
 @Module({
   imports: [
@@ -61,7 +63,7 @@ import { CronJob } from 'cron';
           username: configService.get<string>('mysql_server_username'),
           password: configService.get<string>('mysql_server_password'),
           database: configService.get<string>('mysql_server_database'),
-          entities: [User],
+          entities: [User, Job],
           synchronize: true, // 生产环境建议关闭自动同步，使用迁移工具管理数据库结构
           logging: true,
           logger: new CustomTypeOrmLogger(logger),
@@ -117,6 +119,7 @@ import { CronJob } from 'cron';
     AiModule,
     EmailModule,
     UsersModule,
+    JobModule,
   ],
   controllers: [AppController],
   providers: [AppService],
@@ -125,34 +128,34 @@ export class AppModule {
   @Inject(SchedulerRegistry)
   private schedulerRegistry: SchedulerRegistry;
 
-  async onApplicationBootstrap() {
-    const job = new CronJob(CronExpression.EVERY_SECOND, () => {
-      console.log('run cron job every second');
-    });
+  // async onApplicationBootstrap() {
+  //   const job = new CronJob(CronExpression.EVERY_SECOND, () => {
+  //     console.log('run cron job every second');
+  //   });
 
-    this.schedulerRegistry.addCronJob('job1', job);
-    job.start();
-    setTimeout(() => {
-      job.stop();
-      console.log('cron job has been stopped');
-    }, 10000);
+  //   this.schedulerRegistry.addCronJob('job1', job);
+  //   job.start();
+  //   setTimeout(() => {
+  //     job.stop();
+  //     console.log('cron job has been stopped');
+  //   }, 10000);
 
-    const intervalRef = setInterval(() => {
-      console.log('run interval job every 5 seconds');
-    }, 5000);
-    this.schedulerRegistry.addInterval('interval1', intervalRef);
-    setTimeout(() => {
-      this.schedulerRegistry.deleteInterval('interval1');
-      console.log('interval job has been stopped');
-    }, 20000);
+  //   const intervalRef = setInterval(() => {
+  //     console.log('run interval job every 5 seconds');
+  //   }, 5000);
+  //   this.schedulerRegistry.addInterval('interval1', intervalRef);
+  //   setTimeout(() => {
+  //     this.schedulerRegistry.deleteInterval('interval1');
+  //     console.log('interval job has been stopped');
+  //   }, 20000);
 
-    const timeoutRef = setTimeout(() => {
-      console.log('run timeout job after 10 seconds');
-    }, 10000);
-    this.schedulerRegistry.addTimeout('timeout1', timeoutRef);
-    setTimeout(() => {
-      this.schedulerRegistry.deleteTimeout('timeout1');
-      console.log('timeout job has been stopped');
-    }, 15000);
-  }
+  //   const timeoutRef = setTimeout(() => {
+  //     console.log('run timeout job after 10 seconds');
+  //   }, 10000);
+  //   this.schedulerRegistry.addTimeout('timeout1', timeoutRef);
+  //   setTimeout(() => {
+  //     this.schedulerRegistry.deleteTimeout('timeout1');
+  //     console.log('timeout job has been stopped');
+  //   }, 15000);
+  // }
 }
