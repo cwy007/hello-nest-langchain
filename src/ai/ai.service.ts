@@ -21,6 +21,9 @@ import {
   AI_TTS_STREAM_EVENT,
   AiTtsStreamEvent,
 } from 'src/common/stream-events';
+import { createAgent } from 'langchain';
+import { UIMessage } from 'ai';
+import { toBaseMessages, toUIMessageStream } from '@ai-sdk/langchain'
 
 const queryUserArgsSchema = z.object({
   userId: z.string().describe('用户 ID，例如: 001, 002, 003'),
@@ -31,6 +34,8 @@ export class AiService {
   private readonly chain: Runnable;
 
   private readonly modelWithTools: Runnable<BaseMessage[], AIMessage>;
+
+  private readonly agent: ReturnType<typeof createAgent>;
 
   constructor(
     @Inject('CHAT_MODEL') private readonly model: ChatOpenAI,
@@ -53,6 +58,27 @@ export class AiService {
       this.cronJobTool,
       this.timeNowTool,
     ]);
+
+    // createAgent 不用自己写 agent loop，内部会自动循环调用工具直到模型给出最终答案
+    this.agent = createAgent({
+      model: model,
+      tools: [
+        this.webSearchTool,
+      ],
+      systemPrompt: `你是 AI 助手，需要最新信息、事实核查或联网信息时，请使用 web_search 工具搜索后再作答。`,
+    });
+  }
+
+  async runAgentStream(messages: UIMessage[]) {
+    const lcMessages = await toBaseMessages(messages);
+    const lgStream = await this.agent.stream(
+      { messages: lcMessages },
+      {
+        streamMode: ['messages', 'values'],
+        recursionLimit: 12,
+      }
+    );
+    return toUIMessageStream(lgStream as AsyncIterable<AIMessageChunk>);
   }
 
   async runChain(query: string): Promise<string> {
