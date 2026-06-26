@@ -8,6 +8,9 @@
     "assets": [{
       "include": "*.env*",
       "outDir": "dist"
+    }, {
+      "include": "../public/**/*",
+      "outDir": "dist/public"
     }]
   }
 }
