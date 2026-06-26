@@ -63,7 +63,12 @@ export class AiService {
     this.agent = createAgent({
       model: model,
       tools: [
+        this.queryUserTool,
+        this.sendMailTool,
         this.webSearchTool,
+        this.dbUsersCrudTool,
+        this.cronJobTool,
+        this.timeNowTool,
       ],
       systemPrompt: `你是 AI 助手，需要最新信息、事实核查或联网信息时，请使用 web_search 工具搜索后再作答。`,
     });
@@ -75,7 +80,7 @@ export class AiService {
       { messages: lcMessages },
       {
         streamMode: ['messages', 'values'],
-        recursionLimit: 12,
+        recursionLimit: 30,
       }
     );
     return toUIMessageStream(lgStream as AsyncIterable<AIMessageChunk>);
